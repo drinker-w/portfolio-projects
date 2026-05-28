@@ -34,8 +34,9 @@ public class StatsService {
     }
 
         public List<Map<String, Object>> getFunnelData() {
-        LocalDateTime endTime = LocalDateTime.now();
-        LocalDateTime startTime = endTime.minusDays(7);
+        // 查询所有数据，不设时间限制
+        LocalDateTime endTime = LocalDateTime.now().plusDays(1);
+        LocalDateTime startTime = LocalDateTime.of(2020, 1, 1, 0, 0, 0);
         return userBehaviorMapper.statsFunnel(startTime, endTime);
     }
 
@@ -64,17 +65,16 @@ public class StatsService {
      * 按小时统计并记录到behavior_stats表
      */
     public int aggregateHourlyStats() {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime startTime = now.minusHours(1).withMinute(0).withSecond(0);
-        LocalDateTime endTime = now.withMinute(0).withSecond(0);
+        // 查询最近7天的数据进行聚合
+        LocalDateTime endTime = LocalDateTime.now();
+        LocalDateTime startTime = endTime.minusDays(7);
 
-        log.info("开始执行小时数据聚合：{} - {}", startTime, endTime);
+        log.info("开始执行数据聚合：{} - {}", startTime, endTime);
 
         List<Map<String, Object>> hourlyStats = userBehaviorMapper.statsByHour(startTime, endTime);
 
         int processedCount = 0;
         for (Map<String, Object> stat : hourlyStats) {
-            // 这里可以插入到behavior_stats表
             log.info("聚合数据 - 时间: {}, PV: {}, UV: {}",
                     stat.get("statTime"),
                     stat.get("pvCount"),
@@ -82,7 +82,7 @@ public class StatsService {
             processedCount++;
         }
 
-        log.info("小时数据聚合完成，处理{}条记录", processedCount);
+        log.info("数据聚合完成，处理{}条记录", processedCount);
         return processedCount;
     }
 }

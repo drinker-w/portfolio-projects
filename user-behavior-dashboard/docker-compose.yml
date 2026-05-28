@@ -34,6 +34,9 @@ services:
     container_name: dashboard-backend
     ports:
       - "8081:8081"
+    dns:
+      - 8.8.8.8
+      - 114.114.114.114
     environment:
       DB_HOST: mysql
       DB_PORT: 3306

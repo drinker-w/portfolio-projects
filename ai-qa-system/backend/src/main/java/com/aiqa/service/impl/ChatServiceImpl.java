@@ -13,7 +13,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -26,65 +26,59 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public String ask(Long userId, String question) {
-        
-        String prompt = buildPrompt(userId, question);
-
-        String answer = llmService.generate(prompt);
-
+        String answer = llmService.generate("请回答以下问题：" + question);
         saveChatHistory(userId, null, question, answer);
-
         return answer;
     }
 
     @Override
-    public void askStream(Long userId, Long documentId, String question, SseEmitter emitter) {
-        
-        String prompt = buildPrompt(userId, question);
+    public void askStream(Long userId, Long documentId, String question,
+                          List<Map<String, String>> history, SseEmitter emitter) {
+
+        Document doc = documentService.getById(documentId);
+        String docName = doc != null ? doc.getFileName() : "未知文档";
+        String docContent = "";
+        if (doc != null && doc.getContent() != null) {
+            docContent = doc.getContent();
+            int maxLen = 4000;
+            if (docContent.length() > maxLen) {
+                docContent = docContent.substring(0, maxLen) + "...";
+            }
+        }
+
+        // 构建带历史上下文的提示词
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("你是一个智能文档助手。请基于以下文档内容回答用户问题。\n\n");
+        prompt.append("【当前文档】").append(docName).append("\n");
+        prompt.append(docContent).append("\n\n");
+
+        // 添加对话历史作为上下文
+        if (history != null && !history.isEmpty()) {
+            prompt.append("【对话历史】\n");
+            int recentCount = Math.min(history.size(), 6); // 最多保留最近6轮
+            int startIdx = history.size() - recentCount;
+            for (int i = startIdx; i < history.size(); i++) {
+                Map<String, String> msg = history.get(i);
+                prompt.append("用户: ").append(msg.get("user")).append("\n");
+                prompt.append("助手: ").append(msg.get("ai")).append("\n");
+            }
+            prompt.append("\n");
+        }
+
+        prompt.append("【当前问题】\n").append(question);
+        prompt.append("\n\n请基于文档内容准确回答。如果文档中没有相关信息，请如实告知。");
 
         StringBuilder fullAnswer = new StringBuilder();
-
-        llmService.generateStreamWithCollector(prompt, emitter, fullAnswer);
+        llmService.generateStreamWithCollector(prompt.toString(), emitter, fullAnswer);
 
         try {
             saveChatHistory(userId, documentId, question, fullAnswer.toString());
-            log.info("对话历史已保存，问题: {}，回答长度: {}", question, fullAnswer.length());
         } catch (Exception e) {
             log.error("保存对话历史失败", e);
         }
     }
 
-        private String buildPrompt(Long userId, String question) {
-        StringBuilder promptBuilder = new StringBuilder();
-
-        
-        List<Document> documents = documentService.listByUserId(userId);
-
-        if (documents.isEmpty()) {
-            promptBuilder.append("用户问题：").append(question);
-        } else {
-            
-            promptBuilder.append("请根据以下文档内容回答用户的问题。\n\n");
-            promptBuilder.append("【参考文档】\n");
-
-            int maxLength = 3000;
-            for (Document doc : documents) {
-                String content = doc.getContent();
-                if (content != null && content.length() > maxLength) {
-                    content = content.substring(0, maxLength) + "...";
-                }
-                promptBuilder.append("文档名：").append(doc.getFileName()).append("\n");
-                promptBuilder.append("内容：").append(content).append("\n\n");
-            }
-
-            promptBuilder.append("【用户问题】\n");
-            promptBuilder.append(question);
-            promptBuilder.append("\n\n请基于上述文档内容给出准确、详细的回答。如果文档中没有相关信息，请如实告知。");
-        }
-
-        return promptBuilder.toString();
-    }
-
-        private void saveChatHistory(Long userId, Long documentId, String question, String answer) {
+    private void saveChatHistory(Long userId, Long documentId, String question, String answer) {
         try {
             ChatHistory history = new ChatHistory();
             history.setUserId(userId);

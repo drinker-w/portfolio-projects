@@ -32,6 +32,9 @@ services:
     container_name: ai-qa-backend
     ports:
       - "8080:8080"
+    dns:
+      - 8.8.8.8
+      - 114.114.114.114
     volumes:
       - uploads:/app/uploads
     environment:
@@ -42,7 +45,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-123456}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-your_api_key_here}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-sk-2330ac708d964ca3b86e3f7037988f07}
       JWT_SECRET: ${JWT_SECRET:-AiQASystemJwtSecretKey2026ForLocalDevMustBeAtLeast256BitsLong}
     depends_on:
       mysql:

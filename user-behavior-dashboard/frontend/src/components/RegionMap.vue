@@ -24,7 +24,6 @@ const fetchData = async () => {
 const updateChart = (data) => {
   if (!chart) return
 
-  // 后端返回 region + pvCount，需要转换成 name + value
   const sortedData = [...data].sort((a, b) => b.pvCount - a.pvCount)
   const regions = sortedData.map(item => item.region)
   const values = sortedData.map(item => item.pvCount)
@@ -32,10 +31,10 @@ const updateChart = (data) => {
   chart.setOption({
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderColor: '#eee',
+      backgroundColor: 'rgba(17,24,39,0.95)',
+      borderColor: 'rgba(255,255,255,0.1)',
       borderWidth: 1,
-      textStyle: { color: '#333' },
+      textStyle: { color: '#e2e8f0', fontSize: 13 },
       axisPointer: { type: 'shadow' }
     },
     grid: {
@@ -48,63 +47,65 @@ const updateChart = (data) => {
     xAxis: {
       type: 'category',
       data: regions,
-      axisLine: { lineStyle: { color: '#ddd' } },
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisTick: { show: false },
       axisLabel: {
-        color: '#666',
-        rotate: 30,
-        fontSize: 12
+        color: '#94a3b8',
+        fontSize: 12,
+        fontWeight: 500
       }
     },
     yAxis: {
       type: 'value',
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { color: '#f0f0f0' } },
-      axisLabel: { color: '#666' }
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
+      axisLabel: { color: '#64748b', fontSize: 11 }
     },
     series: [
       {
-        name: '用户数',
+        name: 'PV',
         type: 'bar',
-        barWidth: '60%',
+        barWidth: '55%',
         data: values,
         itemStyle: {
-          borderRadius: [6, 6, 0, 0],
+          borderRadius: [8, 8, 0, 0],
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: '#409eff' },
-            { offset: 1, color: '#79bbff' }
+            { offset: 0, color: '#38bdf8' },
+            { offset: 1, color: '#0ea5e9' }
           ])
         },
         emphasis: {
           itemStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: '#337ecc' },
-              { offset: 1, color: '#409eff' }
+              { offset: 0, color: '#a78bfa' },
+              { offset: 1, color: '#8b5cf6' }
             ])
           }
         },
         label: {
           show: true,
           position: 'top',
-          color: '#666',
-          fontSize: 12,
+          color: '#94a3b8',
+          fontSize: 11,
+          fontWeight: 500,
           formatter: (params) => params.value.toLocaleString()
         }
       }
-    ]
+    ],
+    animationDuration: 1200,
+    animationEasing: 'cubicInOut'
   })
 }
 
 const initChart = () => {
   if (chartRef.value) {
-    chart = echarts.init(chartRef.value)
+    chart = echarts.init(chartRef.value, null, { devicePixelRatio: 2 })
     fetchData()
   }
 }
 
-const handleResize = () => {
-  chart?.resize()
-}
+const handleResize = () => { chart?.resize() }
 
 onMounted(() => {
   nextTick(initChart)
@@ -120,41 +121,47 @@ defineExpose({ fetchData })
 </script>
 
 <template>
-  <el-card shadow="hover" class="chart-card" v-loading="loading">
-    <template #header>
-      <div class="card-header">
-        <span class="card-title">地域分布</span>
-      </div>
-    </template>
+  <div class="chart-wrapper glass-card" v-loading="loading">
+    <div class="chart-header">
+      <span class="chart-title">地域分布</span>
+      <span class="chart-desc">最近 7 天</span>
+    </div>
     <div ref="chartRef" class="chart-container"></div>
-  </el-card>
+  </div>
 </template>
 
 <style scoped>
-.chart-card {
-  border-radius: 12px;
-  border: none;
+.chart-wrapper {
+  padding: 24px;
+  border-radius: 16px;
 }
 
-.chart-card :deep(.el-card__header) {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
+.chart-wrapper :deep(.el-loading-mask) {
+  background: rgba(11,17,32,0.6);
+  backdrop-filter: blur(4px);
+  border-radius: 16px;
 }
 
-.card-header {
+.chart-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 8px;
 }
 
-.card-title {
-  font-size: 16px;
+.chart-title {
+  font-size: 15px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #e2e8f0;
+}
+
+.chart-desc {
+  font-size: 11px;
+  color: #64748b;
 }
 
 .chart-container {
   width: 100%;
-  height: 300px;
+  height: 320px;
 }
 </style>
